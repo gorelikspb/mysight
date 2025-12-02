@@ -71,6 +71,13 @@ async function getKeywordsFromHuggingFace(imageBase64) {
             return await getKeywordsFromHuggingFaceAlternative(imageBase64);
         }
         
+        // Проверяем наличие токена
+        const hfToken = window.HF_TOKEN || null;
+        if (!hfToken) {
+            console.log('ℹ️ Hugging Face token not found. Some models may require authentication.');
+            console.log('💡 Tip: Create config.js with HF_TOKEN for access to more models');
+        }
+        
         // Конвертируем base64 в правильный формат для Hugging Face API
         // Hugging Face ожидает base64 БЕЗ префикса data:image/...
         let base64Data = imageBase64.includes(',') ? imageBase64.split(',')[1] : imageBase64;
@@ -126,9 +133,18 @@ async function getKeywordsFromHuggingFace(imageBase64) {
                         continue;
                     }
                     
-                    // Если 404 или 401 - модель недоступна, пробуем следующую
-                    if (response.status === 404 || response.status === 401) {
-                        console.log(`Model ${model} is not available, trying next...`);
+                    // Если 404 - модель недоступна, пробуем следующую
+                    if (response.status === 404) {
+                        console.log(`Model ${model} not found, trying next...`);
+                        continue;
+                    }
+                    
+                    // Если 401 - модель требует токен или подписку
+                    if (response.status === 401) {
+                        console.log(`Model ${model} requires authentication (token or subscription), trying next...`);
+                        if (!hfToken) {
+                            console.warn('💡 Tip: Add HF_TOKEN to config.js for access to more models');
+                        }
                         continue;
                     }
                     
