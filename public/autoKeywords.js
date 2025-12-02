@@ -71,27 +71,40 @@ async function getKeywordsFromHuggingFace(imageBase64) {
             return await getKeywordsFromHuggingFaceAlternative(imageBase64);
         }
         
-        // Конвертируем base64 в blob для отправки
-        const base64Data = imageBase64.includes(',') ? imageBase64.split(',')[1] : imageBase64;
+        // Конвертируем base64 в правильный формат для Hugging Face API
+        // Hugging Face ожидает base64 БЕЗ префикса data:image/...
+        let base64Data = imageBase64.includes(',') ? imageBase64.split(',')[1] : imageBase64;
         
-        // Пробуем несколько моделей по очереди
+        // Пробуем несколько моделей по очереди (более доступные модели)
         const models = [
-            'microsoft/beit-base-patch16-224', // Более надежная модель
-            'google/vit-base-patch16-224',     // Альтернатива
+            'google/vit-base-patch16-224',     // Более доступная модель
+            'microsoft/resnet-50',              // Альтернатива
+            'facebook/deit-base-distilled-patch16-224', // Еще одна альтернатива
         ];
+        
+        // Получаем токен из конфига, если есть
+        const hfToken = window.HF_TOKEN || null;
         
         for (const model of models) {
             try {
                 console.log(`Trying model: ${model}`);
                 
+                // Формируем заголовки
+                const headers = {
+                    'Content-Type': 'application/json',
+                };
+                
+                // Добавляем токен, если есть
+                if (hfToken) {
+                    headers['Authorization'] = `Bearer ${hfToken}`;
+                }
+                
                 // Используем правильный формат для Hugging Face API
-                // Для ImageNet моделей нужен правильный формат base64
+                // Для изображений отправляем base64 строку напрямую
                 const response = await fetch(
                     `https://api-inference.huggingface.co/models/${model}`,
                     {
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
+                        headers: headers,
                         method: 'POST',
                         body: JSON.stringify({
                             inputs: base64Data
@@ -107,9 +120,18 @@ async function getKeywordsFromHuggingFace(imageBase64) {
                     if (response.status === 503) {
                         console.log('Model is loading, waiting 5 seconds...');
                         await new Promise(resolve => setTimeout(resolve, 5000));
-                        continue; // Пробуем следующую модель
+                        // Пробуем еще раз эту же модель
+                        continue;
                     }
-                    continue; // Пробуем следующую модель
+                    
+                    // Если 404 или 401 - модель недоступна, пробуем следующую
+                    if (response.status === 404 || response.status === 401) {
+                        console.log(`Model ${model} is not available, trying next...`);
+                        continue;
+                    }
+                    
+                    // Для других ошибок тоже пробуем следующую модель
+                    continue;
                 }
 
                 const data = await response.json();
@@ -144,13 +166,22 @@ async function getKeywordsFromHuggingFace(imageBase64) {
                     return keywords;
                 }
             } catch (modelError) {
-                // Проверяем, это ли ошибка CORS
-                if (modelError.message && (modelError.message.includes('CORS') || modelError.message.includes('Failed to fetch'))) {
-                    console.error('❌ CORS ошибка! Hugging Face API блокируется браузером.');
-                    console.error('💡 Решение: Задеплойте проект на Cloudflare Pages/GitHub Pages. См. DEPLOY.md');
-                    console.error('💡 После деплоя API будет работать автоматически.');
-                    break; // Прерываем цикл
+                // Проверяем тип ошибки
+                const errorMsg = modelError.message || String(modelError);
+                
+                // CORS ошибка (обычно на localhost или file://)
+                if (errorMsg.includes('CORS') || errorMsg.includes('Failed to fetch') || errorMsg.includes('ERR_FAILED')) {
+                    // Если это не localhost/file://, то это может быть проблема с API
+                    if (window.location.protocol !== 'file:' && !window.location.hostname.includes('localhost')) {
+                        console.warn(`⚠️ Hugging Face API недоступен для модели ${model}. Пробуем следующую...`);
+                        continue; // Пробуем следующую модель
+                    } else {
+                        console.error('❌ CORS ошибка! Hugging Face API блокируется браузером.');
+                        console.error('💡 Решение: Задеплойте проект на Cloudflare Pages/GitHub Pages.');
+                        break; // Прерываем цикл только для file://
+                    }
                 }
+                
                 console.warn(`Error with model ${model}:`, modelError);
                 continue; // Пробуем следующую модель
             }
