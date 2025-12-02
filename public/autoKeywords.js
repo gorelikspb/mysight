@@ -91,22 +91,24 @@ async function getKeywordsFromHuggingFace(imageBase64) {
             'microsoft/beit-base-patch16-224',         // BEiT от Microsoft (может требовать токен)
         ];
         
-        // Определяем, использовать ли серверный прокси или прямой запрос
-        // Если есть токен и мы на задеплоенном сайте, используем прокси для обхода CORS
-        const useProxy = hfToken && window.location.hostname !== 'localhost' && window.location.protocol !== 'file:';
-        const apiUrl = useProxy 
-            ? '/api/huggingface'  // Используем наш прокси
-            : `https://api-inference.huggingface.co/models/${models[0]}`; // Прямой запрос (может не работать из-за CORS)
+        // Определяем URL Worker для проксирования запросов
+        // Замените на URL вашего Cloudflare Worker
+        const workerUrl = 'https://mysight-hf-proxy.ваш-аккаунт.workers.dev';
+        // Или используйте кастомный домен, если настроен
+        
+        // Проверяем, есть ли Worker URL (можно задать через переменную окружения или конфиг)
+        const proxyUrl = window.HF_WORKER_URL || workerUrl;
+        const useProxy = proxyUrl && proxyUrl !== workerUrl; // Используем прокси, если URL задан
         
         for (const model of models) {
             try {
-                console.log(`Trying model: ${model}${useProxy ? ' (via proxy)' : ' (direct)'}`);
+                console.log(`Trying model: ${model}${useProxy ? ' (via Worker)' : ' (direct - may fail due to CORS)'}`);
                 
                 let response;
                 
                 if (useProxy) {
-                    // Используем серверный прокси для обхода CORS
-                    response = await fetch('/api/huggingface', {
+                    // Используем Cloudflare Worker для обхода CORS
+                    response = await fetch(proxyUrl, {
                         headers: {
                             'Content-Type': 'application/json',
                         },
