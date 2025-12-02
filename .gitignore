@@ -17,6 +17,16 @@ raw/
 *.swp
 *.swo
 
-# Workspace файлы (можно коммитить, но опционально)
-# *.code-workspace
+# Workspace файлы
+*.code-workspace
+
+# Документация и логи проекта (не нужны в репозитории для деплоя)
+AUTO_KEYWORDS_OPTIONS.md
+CORS_SOLUTION.md
+DEPLOY.md
+FALLBACK_EXPLANATION.md
+PROJECT_LOG.md
+QUICK_START.md
+*.md
+!README.md
 
