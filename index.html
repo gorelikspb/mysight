@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MySight - Поиск фотографий по ключевым словам</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📸 MySight</h1>
+            <p class="subtitle">Найди свои фотографии по ключевым словам</p>
+        </header>
+
+        <div class="search-section">
+            <input 
+                type="text" 
+                id="searchInput" 
+                placeholder="Например: велосипед детское кресло рассвет город"
+                class="search-input"
+            >
+            <button id="searchBtn" class="btn btn-primary">Поиск</button>
+            <button id="clearSearchBtn" class="btn btn-secondary">Очистить</button>
+        </div>
+
+        <div class="upload-section">
+            <h2>Добавить фотографии</h2>
+            <div class="upload-options">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="autoKeywordsCheckbox" checked>
+                    <span>🤖 Автоматически определять ключевые слова</span>
+                </label>
+                <select id="apiSelect" class="api-select">
+                    <option value="huggingface">Hugging Face API (требует деплой на сервер)</option>
+                    <option value="google">Google Vision API (требует ключ)</option>
+                    <option value="exif">Только EXIF данные</option>
+                    <option value="combined">Комбинированный (EXIF + AI)</option>
+                </select>
+            </div>
+            <div class="upload-area" id="uploadArea">
+                <input type="file" id="fileInput" accept="image/*" multiple>
+                <label for="fileInput" class="upload-label">
+                    <span class="upload-icon">📁</span>
+                    <span>Выберите фотографии (можно несколько)</span>
+                </label>
+            </div>
+            <div id="uploadProgress" class="upload-progress" style="display: none;">
+                <div class="progress-bar">
+                    <div id="progressFill" class="progress-fill"></div>
+                </div>
+                <p id="progressText" class="progress-text">Обработка...</p>
+            </div>
+            <p class="upload-hint">💡 Максимальный размер файла: 5MB. Большие изображения будут автоматически сжаты.</p>
+            <div id="statusMessages" class="status-messages"></div>
+            <div id="previewContainer" class="preview-container"></div>
+        </div>
+
+        <div class="results-section">
+            <h2>Результаты поиска</h2>
+            <div id="resultsContainer" class="results-grid">
+                <p class="empty-state">Введите ключевые слова для поиска</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно для добавления ключевых слов -->
+    <div id="keywordsModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>Добавить ключевые слова</h3>
+            <div class="modal-image-preview">
+                <img id="modalImagePreview" src="" alt="Preview">
+            </div>
+            <div class="keywords-input-section">
+                <input 
+                    type="text" 
+                    id="keywordsInput" 
+                    placeholder="Введите ключевые слова через запятую (например: велосипед, детское кресло, рассвет, город)"
+                    class="keywords-input"
+                >
+                <p class="keywords-hint">💡 Чем больше ключевых слов, тем проще найти фотографию</p>
+            </div>
+            <div class="modal-actions">
+                <button id="saveKeywordsBtn" class="btn btn-primary">Сохранить</button>
+                <button id="cancelKeywordsBtn" class="btn btn-secondary">Отмена</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- EXIF.js для парсинга метаданных -->
+    <script src="https://cdn.jsdelivr.net/npm/exif-js@2.3.0/exif.js"></script>
+    <!-- Автоматическое определение ключевых слов -->
+    <script src="autoKeywords.js"></script>
+    <!-- Основное приложение -->
+    <script src="app.js"></script>
+</body>
+</html>
+
