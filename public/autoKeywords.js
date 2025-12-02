@@ -91,9 +91,6 @@ async function getKeywordsFromHuggingFace(imageBase64) {
             'microsoft/beit-base-patch16-224',         // BEiT от Microsoft (может требовать токен)
         ];
         
-        // Получаем токен из конфига, если есть
-        const hfToken = window.HF_TOKEN || null;
-        
         for (const model of models) {
             try {
                 console.log(`Trying model: ${model}`);
