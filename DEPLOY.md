@@ -25,7 +25,7 @@
    - Настройки:
      - **Framework preset**: **"None"**
      - **Build command**: оставьте **пустым**
-     - **Build output directory**: оставьте **пустым** (файлы в корне)
+     - **Build output directory**: `public` ⚠️ **ВАЖНО!**
    - Нажмите **"Save and Deploy"**
 
 3. **Готово!** Сайт будет доступен по адресу: `https://your-project-name.pages.dev`
