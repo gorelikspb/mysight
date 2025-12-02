@@ -1,7 +1,7 @@
 // Cloudflare Pages Function для получения конфигурации
 // Эта функция использует Environment Variables из Cloudflare Pages
 
-export async function onRequestGet(context) {
+export async function onRequest(context) {
     // Получаем токен из Environment Variables
     const hfToken = context.env.HF_TOKEN || '';
     const googleVisionKey = context.env.GOOGLE_VISION_API_KEY || '';
