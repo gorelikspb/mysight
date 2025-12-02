@@ -133,7 +133,7 @@ function setupEventListeners() {
 
 // Обработка выбора файлов с автоматическим определением ключевых слов
 async function handleFileSelect(e) {
-    const files = e.target.files;
+    const files = Array.from(e.target.files);
     
     // Если файлы не выбраны, выходим
     if (!files || files.length === 0) {
@@ -146,9 +146,8 @@ async function handleFileSelect(e) {
         // Используем setTimeout чтобы сбросить после обработки события
         setTimeout(() => {
             fileInput.value = '';
-        }, 0);
+        }, 100);
     }
-    const files = Array.from(e.target.files);
     const imageFiles = files.filter(file => file.type.startsWith('image/'));
     
     if (imageFiles.length === 0) return;
