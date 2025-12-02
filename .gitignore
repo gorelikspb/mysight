@@ -17,3 +17,6 @@ raw/
 *.swp
 *.swo
 
+# Workspace файлы (можно коммитить, но опционально)
+# *.code-workspace
+
