@@ -1,0 +1,39 @@
+// Cloudflare Pages Function для получения конфигурации
+// Эта функция использует Environment Variables из Cloudflare Pages
+
+export async function onRequest(context) {
+    // Получаем токен из Environment Variables
+    const hfToken = context.env.HF_TOKEN || '';
+    const googleVisionKey = context.env.GOOGLE_VISION_API_KEY || '';
+    
+    // Генерируем config.js с токенами
+    const configContent = `// Конфигурация для MySight
+// Автоматически генерируется из Environment Variables Cloudflare Pages
+
+const CONFIG = {
+    // Google Cloud Vision API ключ
+    GOOGLE_VISION_API_KEY: ${googleVisionKey ? `'${googleVisionKey}'` : `''`},
+    
+    // Hugging Face API токен
+    HF_TOKEN: ${hfToken ? `'${hfToken}'` : `''`}
+};
+
+// Экспортируем токен для использования в autoKeywords.js
+if (CONFIG.HF_TOKEN) {
+    window.HF_TOKEN = CONFIG.HF_TOKEN;
+}
+
+if (CONFIG.GOOGLE_VISION_API_KEY) {
+    window.GOOGLE_VISION_API_KEY = CONFIG.GOOGLE_VISION_API_KEY;
+}
+`;
+    
+    // Возвращаем как JavaScript файл
+    return new Response(configContent, {
+        headers: {
+            'Content-Type': 'application/javascript; charset=utf-8',
+            'Cache-Control': 'public, max-age=3600' // Кэшируем на 1 час
+        }
+    });
+}
+
