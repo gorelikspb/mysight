@@ -91,32 +91,52 @@ async function getKeywordsFromHuggingFace(imageBase64) {
             'microsoft/beit-base-patch16-224',         // BEiT от Microsoft (может требовать токен)
         ];
         
+        // Определяем, использовать ли серверный прокси или прямой запрос
+        // Если есть токен и мы на задеплоенном сайте, используем прокси для обхода CORS
+        const useProxy = hfToken && window.location.hostname !== 'localhost' && window.location.protocol !== 'file:';
+        const apiUrl = useProxy 
+            ? '/api/huggingface'  // Используем наш прокси
+            : `https://api-inference.huggingface.co/models/${models[0]}`; // Прямой запрос (может не работать из-за CORS)
+        
         for (const model of models) {
             try {
-                console.log(`Trying model: ${model}`);
+                console.log(`Trying model: ${model}${useProxy ? ' (via proxy)' : ' (direct)'}`);
                 
-                // Формируем заголовки
-                const headers = {
-                    'Content-Type': 'application/json',
-                };
+                let response;
                 
-                // Добавляем токен, если есть
-                if (hfToken) {
-                    headers['Authorization'] = `Bearer ${hfToken}`;
-                }
-                
-                // Используем правильный формат для Hugging Face API
-                // Для изображений отправляем base64 строку напрямую
-                const response = await fetch(
-                    `https://api-inference.huggingface.co/models/${model}`,
-                    {
-                        headers: headers,
+                if (useProxy) {
+                    // Используем серверный прокси для обхода CORS
+                    response = await fetch('/api/huggingface', {
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
                         method: 'POST',
                         body: JSON.stringify({
-                            inputs: base64Data
+                            model: model,
+                            imageBase64: base64Data
                         }),
+                    });
+                } else {
+                    // Прямой запрос (может не работать из-за CORS)
+                    const headers = {
+                        'Content-Type': 'application/json',
+                    };
+                    
+                    if (hfToken) {
+                        headers['Authorization'] = `Bearer ${hfToken}`;
                     }
-                );
+                    
+                    response = await fetch(
+                        `https://api-inference.huggingface.co/models/${model}`,
+                        {
+                            headers: headers,
+                            method: 'POST',
+                            body: JSON.stringify({
+                                inputs: base64Data
+                            }),
+                        }
+                    );
+                }
 
                 if (!response.ok) {
                     const errorText = await response.text();
