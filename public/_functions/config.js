@@ -2,9 +2,13 @@
 // Эта функция использует Environment Variables из Cloudflare Pages
 
 export async function onRequest(context) {
-    // Получаем токен из Environment Variables
-    const hfToken = context.env.HF_TOKEN || '';
-    const googleVisionKey = context.env.GOOGLE_VISION_API_KEY || '';
+    // Получаем токен из Environment Variables (Secrets)
+    // В Cloudflare Pages секреты доступны через context.env
+    const hfToken = context.env.HF_TOKEN || context.env['HF_TOKEN'] || '';
+    const googleVisionKey = context.env.GOOGLE_VISION_API_KEY || context.env['GOOGLE_VISION_API_KEY'] || '';
+    
+    // Для отладки: проверяем наличие токена
+    // В production логи не будут видны пользователю
     
     // Экранируем токены для безопасной вставки в JavaScript
     const escapeJsString = (str) => {
