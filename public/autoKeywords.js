@@ -75,11 +75,13 @@ async function getKeywordsFromHuggingFace(imageBase64) {
         // Hugging Face ожидает base64 БЕЗ префикса data:image/...
         let base64Data = imageBase64.includes(',') ? imageBase64.split(',')[1] : imageBase64;
         
-        // Пробуем несколько моделей по очереди (более доступные модели)
+        // Пробуем несколько моделей для image-classification
+        // Эти модели обучены на ImageNet и возвращают понятные метки
         const models = [
-            'google/vit-base-patch16-224',     // Более доступная модель
-            'microsoft/resnet-50',              // Альтернатива
-            'facebook/deit-base-distilled-patch16-224', // Еще одна альтернатива
+            'google/vit-base-patch16-224',              // Vision Transformer от Google
+            'microsoft/resnet-50',                     // ResNet от Microsoft
+            'facebook/deit-base-distilled-patch16-224', // DeiT от Facebook
+            'microsoft/beit-base-patch16-224',         // BEiT от Microsoft (может требовать токен)
         ];
         
         // Получаем токен из конфига, если есть
@@ -137,33 +139,48 @@ async function getKeywordsFromHuggingFace(imageBase64) {
                 const data = await response.json();
                 console.log('Hugging Face response:', data);
                 
-                // Обрабатываем разные форматы ответа
+                // Обрабатываем формат ответа от Hugging Face image-classification
+                // Обычно это массив объектов: [{label: "...", score: 0.9}, ...]
                 let labels = [];
                 
                 if (Array.isArray(data)) {
-                    // Если ответ - массив массивов
-                    if (data[0] && Array.isArray(data[0])) {
-                        labels = data[0].slice(0, 10); // Берем топ-10
-                    } else if (data[0] && data[0].label) {
-                        // Если ответ - массив объектов с label
+                    // Если это массив объектов с label и score
+                    if (data[0] && typeof data[0] === 'object' && data[0].label) {
+                        // Сортируем по score (уверенность модели) и берем топ-10
+                        labels = data
+                            .sort((a, b) => (b.score || 0) - (a.score || 0))
+                            .slice(0, 10);
+                    } else if (Array.isArray(data[0])) {
+                        // Если вложенный массив
+                        labels = data[0].slice(0, 10);
+                    } else {
+                        // Если просто массив строк
                         labels = data.slice(0, 10);
                     }
-                } else if (data.label) {
-                    // Если ответ - один объект
-                    labels = [data];
+                } else if (data && typeof data === 'object') {
+                    // Если один объект
+                    if (data.label) {
+                        labels = [data];
+                    } else if (data[0]) {
+                        // Если объект с массивом внутри
+                        labels = Array.isArray(data[0]) ? data[0] : [data];
+                    }
                 }
                 
                 if (labels.length > 0) {
                     const keywords = labels
                         .map(item => {
+                            // Извлекаем label из объекта или берем строку
                             const label = (item.label || item).toLowerCase();
                             return normalizeImageNetLabel(label);
                         })
                         .filter(label => label && label.length > 0)
                         .slice(0, 8); // Ограничиваем до 8 ключевых слов
                     
-                    console.log('Extracted keywords:', keywords);
+                    console.log('✅ Hugging Face keywords extracted:', keywords);
                     return keywords;
+                } else {
+                    console.warn('⚠️ No labels found in Hugging Face response');
                 }
             } catch (modelError) {
                 // Проверяем тип ошибки
