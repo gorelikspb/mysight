@@ -332,6 +332,7 @@
                     
                     let lastError = null;
                     let lastRequestDetails = null;
+                    response = null; // Инициализируем response
                     
                     // Формируем body в зависимости от выбранного формата
                     let requestBody = {};
@@ -371,11 +372,24 @@
                         } catch (err) {
                             lastError = err.message;
                             lastRequestDetails = requestDetails;
+                            response = null; // Сбрасываем response при ошибке
                             continue;
                         }
                     }
                     
-                    // Если все endpoint вернули 404, показываем ошибку
+                    // Если все endpoint вернули 404 или произошла ошибка, показываем ошибку
+                    if (!response) {
+                        showStatus(`❌ Не удалось подключиться к API. Возможна проблема с сетью или CORS.`, 'error');
+                        showResults({
+                            status: 'ERROR',
+                            error: lastError || 'Network error or CORS issue',
+                            requestDetails: lastRequestDetails,
+                            triedEndpoints: endpoints,
+                            suggestion: 'Попробуйте использовать Cloudflare Worker или проверьте подключение к интернету'
+                        }, true);
+                        return;
+                    }
+                    
                     if (response.status === 404) {
                         showStatus(`❌ Все endpoint вернули 404. Модель может быть недоступна через Inference API.`, 'error');
                         showResults({
