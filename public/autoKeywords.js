@@ -127,7 +127,7 @@ async function getKeywordsFromHuggingFace(imageBase64) {
                     }
                     
                     response = await fetch(
-                        `https://api-inference.huggingface.co/models/${model}`,
+                        `https://router.huggingface.co/models/${model}`,
                         {
                             headers: headers,
                             method: 'POST',

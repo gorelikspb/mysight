@@ -54,9 +54,9 @@ export default {
                 );
             }
             
-            // Делаем запрос к Hugging Face API
+            // Делаем запрос к Hugging Face API через новый router endpoint
             const hfResponse = await fetch(
-                `https://api-inference.huggingface.co/models/${model}`,
+                `https://router.huggingface.co/models/${model}`,
                 {
                     headers: {
                         'Content-Type': 'application/json',
