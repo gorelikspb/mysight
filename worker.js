@@ -54,20 +54,60 @@ export default {
                 );
             }
             
-            // Делаем запрос к Hugging Face API через новый router endpoint
-            const hfResponse = await fetch(
-                `https://router.huggingface.co/models/${model}`,
-                {
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${hfToken}`
-                    },
-                    method: 'POST',
-                    body: JSON.stringify({
-                        inputs: imageBase64
-                    })
+            // Делаем запрос к Hugging Face API
+            // Пробуем несколько вариантов endpoint
+            const endpoints = [
+                `https://api-inference.huggingface.co/models/${model}`,
+                `https://router.huggingface.co/hf-inference/${model}`,
+                `https://router.huggingface.co/models/${model}`
+            ];
+            
+            let hfResponse = null;
+            let lastError = null;
+            
+            for (const endpoint of endpoints) {
+                try {
+                    hfResponse = await fetch(endpoint, {
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${hfToken}`
+                        },
+                        method: 'POST',
+                        body: JSON.stringify({
+                            inputs: imageBase64
+                        })
+                    });
+                    
+                    // Если получили ответ (не 404), используем этот endpoint
+                    if (hfResponse.status !== 404) {
+                        break;
+                    }
+                    
+                    lastError = await hfResponse.text();
+                } catch (err) {
+                    lastError = err.message;
+                    continue;
                 }
-            );
+            }
+            
+            // Если все endpoint вернули 404
+            if (!hfResponse || hfResponse.status === 404) {
+                return new Response(
+                    JSON.stringify({ 
+                        error: 'Hugging Face API error',
+                        status: 404,
+                        details: lastError || 'All endpoints returned 404',
+                        triedEndpoints: endpoints
+                    }),
+                    { 
+                        status: 404,
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Access-Control-Allow-Origin': '*'
+                        }
+                    }
+                );
+            }
             
             if (!hfResponse.ok) {
                 const errorText = await hfResponse.text();

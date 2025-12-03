@@ -294,7 +294,13 @@
                     // Прямой запрос к Hugging Face API
                     showStatus('🔄 Прямой запрос к Hugging Face API...', 'info');
                     
-                    const apiUrl = `https://router.huggingface.co/models/${model}`;
+                    // Пробуем несколько вариантов endpoint
+                    const endpoints = [
+                        `https://api-inference.huggingface.co/models/${model}`,
+                        `https://router.huggingface.co/hf-inference/${model}`,
+                        `https://router.huggingface.co/models/${model}`
+                    ];
+                    
                     const headers = {
                         'Content-Type': 'application/json'
                     };
@@ -303,22 +309,56 @@
                         headers['Authorization'] = `Bearer ${token}`;
                     }
                     
-                    requestDetails = {
-                        method: 'POST',
-                        url: apiUrl,
-                        headers: headers,
-                        body: {
-                            inputs: base64Data
-                        }
-                    };
+                    let lastError = null;
+                    let lastRequestDetails = null;
                     
-                    response = await fetch(apiUrl, {
-                        method: 'POST',
-                        headers: headers,
-                        body: JSON.stringify({
-                            inputs: base64Data
-                        })
-                    });
+                    // Пробуем каждый endpoint
+                    for (const apiUrl of endpoints) {
+                        try {
+                            requestDetails = {
+                                method: 'POST',
+                                url: apiUrl,
+                                headers: headers,
+                                body: {
+                                    inputs: base64Data
+                                }
+                            };
+                            
+                            showStatus(`🔄 Пробуем: ${apiUrl}...`, 'info');
+                            
+                            response = await fetch(apiUrl, {
+                                method: 'POST',
+                                headers: headers,
+                                body: JSON.stringify({
+                                    inputs: base64Data
+                                })
+                            });
+                            
+                            // Если получили ответ (даже ошибку), используем этот endpoint
+                            if (response.status !== 404) {
+                                break;
+                            }
+                            
+                            lastError = await response.text();
+                            lastRequestDetails = requestDetails;
+                        } catch (err) {
+                            lastError = err.message;
+                            lastRequestDetails = requestDetails;
+                            continue;
+                        }
+                    }
+                    
+                    // Если все endpoint вернули 404, показываем ошибку
+                    if (response.status === 404) {
+                        showStatus(`❌ Все endpoint вернули 404`, 'error');
+                        showResults({
+                            status: 404,
+                            error: lastError || 'Not Found',
+                            requestDetails: lastRequestDetails,
+                            triedEndpoints: endpoints
+                        }, true);
+                        return;
+                    }
                 }
                 
                 // Показываем детали запроса

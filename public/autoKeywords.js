@@ -118,6 +118,13 @@ async function getKeywordsFromHuggingFace(imageBase64) {
                     });
                 } else {
                     // Прямой запрос (может не работать из-за CORS)
+                    // Пробуем несколько вариантов endpoint
+                    const endpoints = [
+                        `https://api-inference.huggingface.co/models/${model}`,
+                        `https://router.huggingface.co/hf-inference/${model}`,
+                        `https://router.huggingface.co/models/${model}`
+                    ];
+                    
                     const headers = {
                         'Content-Type': 'application/json',
                     };
@@ -126,16 +133,25 @@ async function getKeywordsFromHuggingFace(imageBase64) {
                         headers['Authorization'] = `Bearer ${hfToken}`;
                     }
                     
-                    response = await fetch(
-                        `https://router.huggingface.co/models/${model}`,
-                        {
-                            headers: headers,
-                            method: 'POST',
-                            body: JSON.stringify({
-                                inputs: base64Data
-                            }),
+                    // Пробуем каждый endpoint
+                    for (const endpoint of endpoints) {
+                        try {
+                            response = await fetch(endpoint, {
+                                headers: headers,
+                                method: 'POST',
+                                body: JSON.stringify({
+                                    inputs: base64Data
+                                }),
+                            });
+                            
+                            // Если получили ответ (не 404), используем этот endpoint
+                            if (response.status !== 404) {
+                                break;
+                            }
+                        } catch (err) {
+                            continue;
                         }
-                    );
+                    }
                 }
 
                 if (!response.ok) {
