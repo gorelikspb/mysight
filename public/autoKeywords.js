@@ -91,14 +91,12 @@ async function getKeywordsFromHuggingFace(imageBase64) {
             'microsoft/beit-base-patch16-224',         // BEiT от Microsoft (может требовать токен)
         ];
         
-        // Определяем URL Worker для проксирования запросов
-        // Замените на URL вашего Cloudflare Worker
-        const workerUrl = 'https://mysight-hf-proxy.ваш-аккаунт.workers.dev';
-        // Или используйте кастомный домен, если настроен
+        // URL Cloudflare Worker для проксирования запросов
+        const workerUrl = 'https://mysight-hf-proxy.gorelikgo.workers.dev';
         
-        // Проверяем, есть ли Worker URL (можно задать через переменную окружения или конфиг)
+        // Проверяем, есть ли Worker URL в конфиге (можно переопределить)
         const proxyUrl = window.HF_WORKER_URL || workerUrl;
-        const useProxy = proxyUrl && proxyUrl !== workerUrl; // Используем прокси, если URL задан
+        const useProxy = true; // Всегда используем Worker для обхода CORS
         
         for (const model of models) {
             try {

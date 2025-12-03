@@ -36,6 +36,9 @@ if (CONFIG.HF_TOKEN) {
 if (CONFIG.GOOGLE_VISION_API_KEY) {
     window.GOOGLE_VISION_API_KEY = CONFIG.GOOGLE_VISION_API_KEY;
 }
+
+// URL Cloudflare Worker для проксирования запросов к Hugging Face API
+window.HF_WORKER_URL = 'https://mysight-hf-proxy.gorelikgo.workers.dev';
 `;
     
     // Возвращаем как JavaScript файл
