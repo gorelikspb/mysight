@@ -180,6 +180,15 @@
             
             <label for="workerUrl">Worker URL (если используется Worker):</label>
             <input type="text" id="workerUrl" value="https://mysight-hf-proxy.gorelikgo.workers.dev" placeholder="https://your-worker.workers.dev">
+            
+            <div class="method-selector" style="margin-top: 15px;">
+                <label for="bodyFormat">Формат body:</label>
+                <select id="bodyFormat">
+                    <option value="inputs">inputs (стандартный)</option>
+                    <option value="image">image</option>
+                    <option value="data">data</option>
+                </select>
+            </div>
         </div>
         
         <div class="section">
@@ -201,6 +210,7 @@
         const modelInput = document.getElementById('model');
         const methodSelect = document.getElementById('method');
         const workerUrlInput = document.getElementById('workerUrl');
+        const bodyFormatSelect = document.getElementById('bodyFormat');
         const previewDiv = document.getElementById('preview');
         const statusDiv = document.getElementById('status');
         const resultsDiv = document.getElementById('results');
@@ -251,6 +261,7 @@
             const token = tokenInput.value.trim();
             const model = modelInput.value.trim();
             const workerUrl = workerUrlInput.value.trim();
+            const bodyFormat = bodyFormatSelect.value;
             
             // Извлекаем base64 без префикса data:image/...
             const base64Data = currentImageBase64.includes(',') 
@@ -312,6 +323,16 @@
                     let lastError = null;
                     let lastRequestDetails = null;
                     
+                    // Формируем body в зависимости от выбранного формата
+                    let requestBody = {};
+                    if (bodyFormat === 'inputs') {
+                        requestBody = { inputs: base64Data };
+                    } else if (bodyFormat === 'image') {
+                        requestBody = { image: base64Data };
+                    } else if (bodyFormat === 'data') {
+                        requestBody = { data: base64Data };
+                    }
+                    
                     // Пробуем каждый endpoint
                     for (const apiUrl of endpoints) {
                         try {
@@ -319,9 +340,7 @@
                                 method: 'POST',
                                 url: apiUrl,
                                 headers: headers,
-                                body: {
-                                    inputs: base64Data
-                                }
+                                body: requestBody
                             };
                             
                             showStatus(`🔄 Пробуем: ${apiUrl}...`, 'info');
@@ -329,9 +348,7 @@
                             response = await fetch(apiUrl, {
                                 method: 'POST',
                                 headers: headers,
-                                body: JSON.stringify({
-                                    inputs: base64Data
-                                })
+                                body: JSON.stringify(requestBody)
                             });
                             
                             // Если получили ответ (даже ошибку), используем этот endpoint
