@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест Hugging Face API</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #f5f5f5;
+        }
+        
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 8px;
+        }
+        
+        .section h2 {
+            color: #555;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        input[type="text"], input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        button:hover {
+            background: #45a049;
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .preview {
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        .preview img {
+            max-width: 100%;
+            max-height: 400px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .results {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e8f5e9;
+            border-radius: 5px;
+            border-left: 4px solid #4CAF50;
+        }
+        
+        .error {
+            background: #ffebee;
+            border-left-color: #f44336;
+        }
+        
+        .results h3 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .results pre {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        
+        .status {
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            font-weight: 500;
+        }
+        
+        .status.info {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+        
+        .status.success {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        
+        .status.error {
+            background: #ffebee;
+            color: #c62828;
+        }
+        
+        .method-selector {
+            margin-bottom: 15px;
+        }
+        
+        .method-selector label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        
+        .method-selector select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        .token-input {
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Тест Hugging Face API</h1>
+        
+        <div class="section">
+            <h2>1. Настройки</h2>
+            <div class="method-selector">
+                <label for="method">Метод запроса:</label>
+                <select id="method">
+                    <option value="direct">Прямой запрос (может быть CORS)</option>
+                    <option value="worker">Через Cloudflare Worker</option>
+                </select>
+            </div>
+            
+            <label for="token">Hugging Face Token (опционально):</label>
+            <input type="text" id="token" class="token-input" placeholder="hf_...">
+            
+            <label for="model">Модель:</label>
+            <input type="text" id="model" value="google/vit-base-patch16-224" placeholder="google/vit-base-patch16-224">
+            
+            <label for="workerUrl">Worker URL (если используется Worker):</label>
+            <input type="text" id="workerUrl" value="https://mysight-hf-proxy.gorelikgo.workers.dev" placeholder="https://your-worker.workers.dev">
+        </div>
+        
+        <div class="section">
+            <h2>2. Выберите изображение</h2>
+            <input type="file" id="imageInput" accept="image/*">
+            <div id="preview" class="preview"></div>
+        </div>
+        
+        <div class="section">
+            <h2>3. Результаты</h2>
+            <div id="status"></div>
+            <div id="results"></div>
+        </div>
+    </div>
+
+    <script>
+        const imageInput = document.getElementById('imageInput');
+        const tokenInput = document.getElementById('token');
+        const modelInput = document.getElementById('model');
+        const methodSelect = document.getElementById('method');
+        const workerUrlInput = document.getElementById('workerUrl');
+        const previewDiv = document.getElementById('preview');
+        const statusDiv = document.getElementById('status');
+        const resultsDiv = document.getElementById('results');
+        
+        let currentImageBase64 = null;
+        
+        // Загрузка изображения
+        imageInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                currentImageBase64 = event.target.result;
+                
+                // Показываем превью
+                previewDiv.innerHTML = `<img src="${currentImageBase64}" alt="Preview">`;
+                
+                // Автоматически запускаем тест
+                testAPI();
+            };
+            reader.readAsDataURL(file);
+        });
+        
+        // Функция для показа статуса
+        function showStatus(message, type = 'info') {
+            statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+        
+        // Функция для показа результатов
+        function showResults(data, isError = false) {
+            resultsDiv.innerHTML = `
+                <div class="results ${isError ? 'error' : ''}">
+                    <h3>${isError ? '❌ Ошибка' : '✅ Результат'}</h3>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                </div>
+            `;
+        }
+        
+        // Основная функция тестирования
+        async function testAPI() {
+            if (!currentImageBase64) {
+                showStatus('⚠️ Сначала выберите изображение', 'error');
+                return;
+            }
+            
+            const method = methodSelect.value;
+            const token = tokenInput.value.trim();
+            const model = modelInput.value.trim();
+            const workerUrl = workerUrlInput.value.trim();
+            
+            // Извлекаем base64 без префикса data:image/...
+            const base64Data = currentImageBase64.includes(',') 
+                ? currentImageBase64.split(',')[1] 
+                : currentImageBase64;
+            
+            showStatus('🔄 Отправка запроса...', 'info');
+            resultsDiv.innerHTML = '';
+            
+            try {
+                let response;
+                let requestDetails = {};
+                
+                if (method === 'worker') {
+                    // Запрос через Worker
+                    showStatus('🔄 Отправка через Cloudflare Worker...', 'info');
+                    
+                    requestDetails = {
+                        method: 'POST',
+                        url: workerUrl,
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: {
+                            model: model,
+                            imageBase64: base64Data
+                        }
+                    };
+                    
+                    response = await fetch(workerUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            model: model,
+                            imageBase64: base64Data
+                        })
+                    });
+                } else {
+                    // Прямой запрос к Hugging Face API
+                    showStatus('🔄 Прямой запрос к Hugging Face API...', 'info');
+                    
+                    const apiUrl = `https://router.huggingface.co/models/${model}`;
+                    const headers = {
+                        'Content-Type': 'application/json'
+                    };
+                    
+                    if (token) {
+                        headers['Authorization'] = `Bearer ${token}`;
+                    }
+                    
+                    requestDetails = {
+                        method: 'POST',
+                        url: apiUrl,
+                        headers: headers,
+                        body: {
+                            inputs: base64Data
+                        }
+                    };
+                    
+                    response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: headers,
+                        body: JSON.stringify({
+                            inputs: base64Data
+                        })
+                    });
+                }
+                
+                // Показываем детали запроса
+                console.log('Request details:', requestDetails);
+                console.log('Response status:', response.status);
+                console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    let errorData;
+                    try {
+                        errorData = JSON.parse(errorText);
+                    } catch {
+                        errorData = { raw: errorText };
+                    }
+                    
+                    showStatus(`❌ Ошибка ${response.status}`, 'error');
+                    showResults({
+                        status: response.status,
+                        statusText: response.statusText,
+                        error: errorData,
+                        requestDetails: requestDetails
+                    }, true);
+                    return;
+                }
+                
+                const data = await response.json();
+                
+                showStatus('✅ Успешно!', 'success');
+                showResults({
+                    model: model,
+                    method: method,
+                    predictions: data,
+                    requestDetails: requestDetails
+                });
+                
+            } catch (error) {
+                console.error('Error:', error);
+                showStatus(`❌ Ошибка: ${error.message}`, 'error');
+                showResults({
+                    error: error.message,
+                    stack: error.stack
+                }, true);
+            }
+        }
+        
+        // Кнопка для ручного запуска теста
+        const testButton = document.createElement('button');
+        testButton.textContent = '🚀 Запустить тест';
+        testButton.onclick = testAPI;
+        document.querySelector('.section:last-child').insertBefore(testButton, statusDiv);
+        
+        // Показываем начальную информацию
+        showStatus('ℹ️ Выберите изображение для тестирования', 'info');
+        
+        // Информация о доступных моделях
+        const infoDiv = document.createElement('div');
+        infoDiv.style.marginTop = '20px';
+        infoDiv.style.padding = '15px';
+        infoDiv.style.background = '#fff3cd';
+        infoDiv.style.borderRadius = '5px';
+        infoDiv.innerHTML = `
+            <h3 style="margin-bottom: 10px;">📋 Популярные модели для тестирования:</h3>
+            <ul style="margin-left: 20px; line-height: 1.8;">
+                <li><code>google/vit-base-patch16-224</code> - Vision Transformer</li>
+                <li><code>microsoft/resnet-50</code> - ResNet</li>
+                <li><code>facebook/deit-base-distilled-patch16-224</code> - DeiT</li>
+                <li><code>microsoft/beit-base-patch16-224</code> - BEiT</li>
+            </ul>
+            <p style="margin-top: 10px;"><strong>Примечание:</strong> Некоторые модели могут требовать токен для доступа.</p>
+        `;
+        document.querySelector('.section:first-child').appendChild(infoDiv);
+    </script>
+</body>
+</html>
+
