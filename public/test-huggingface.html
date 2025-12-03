@@ -176,7 +176,17 @@
             <input type="text" id="token" class="token-input" placeholder="hf_...">
             
             <label for="model">Модель:</label>
-            <input type="text" id="model" value="google/vit-base-patch16-224" placeholder="google/vit-base-patch16-224">
+            <select id="model">
+                <option value="google/vit-base-patch16-224">google/vit-base-patch16-224</option>
+                <option value="microsoft/resnet-50">microsoft/resnet-50</option>
+                <option value="facebook/deit-base-distilled-patch16-224">facebook/deit-base-distilled-patch16-224</option>
+                <option value="microsoft/beit-base-patch16-224">microsoft/beit-base-patch16-224</option>
+                <option value="google/vit-large-patch16-224">google/vit-large-patch16-224</option>
+            </select>
+            <small style="display: block; margin-top: 5px; color: #666;">
+                ⚠️ Некоторые модели могут быть недоступны через Inference API. 
+                Проверьте страницу модели на <a href="https://huggingface.co" target="_blank">huggingface.co</a>
+            </small>
             
             <label for="workerUrl">Worker URL (если используется Worker):</label>
             <input type="text" id="workerUrl" value="https://mysight-hf-proxy.gorelikgo.workers.dev" placeholder="https://your-worker.workers.dev">
@@ -305,10 +315,10 @@
                     // Прямой запрос к Hugging Face API
                     showStatus('🔄 Прямой запрос к Hugging Face API...', 'info');
                     
-                    // Пробуем несколько вариантов endpoint
+                    // Правильный формат для нового router endpoint
                     const endpoints = [
+                        `https://router.huggingface.co/hf-inference/models/${model}`,
                         `https://api-inference.huggingface.co/models/${model}`,
-                        `https://router.huggingface.co/hf-inference/${model}`,
                         `https://router.huggingface.co/models/${model}`
                     ];
                     
@@ -367,12 +377,13 @@
                     
                     // Если все endpoint вернули 404, показываем ошибку
                     if (response.status === 404) {
-                        showStatus(`❌ Все endpoint вернули 404`, 'error');
+                        showStatus(`❌ Все endpoint вернули 404. Модель может быть недоступна через Inference API.`, 'error');
                         showResults({
                             status: 404,
                             error: lastError || 'Not Found',
                             requestDetails: lastRequestDetails,
-                            triedEndpoints: endpoints
+                            triedEndpoints: endpoints,
+                            suggestion: 'Проверьте доступность модели на https://huggingface.co/' + model
                         }, true);
                         return;
                     }

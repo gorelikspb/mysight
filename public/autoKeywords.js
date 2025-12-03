@@ -118,10 +118,10 @@ async function getKeywordsFromHuggingFace(imageBase64) {
                     });
                 } else {
                     // Прямой запрос (может не работать из-за CORS)
-                    // Пробуем несколько вариантов endpoint
+                    // Правильный формат для нового router endpoint
                     const endpoints = [
+                        `https://router.huggingface.co/hf-inference/models/${model}`,
                         `https://api-inference.huggingface.co/models/${model}`,
-                        `https://router.huggingface.co/hf-inference/${model}`,
                         `https://router.huggingface.co/models/${model}`
                     ];
                     
